@@ -1,0 +1,4 @@
+package: github.com/47bytes/ver
+import:
+- package: gopkg.in/src-d/go-git.v4
+  version: ^4.0.0-rc9
