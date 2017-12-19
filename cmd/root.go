@@ -11,9 +11,11 @@ import (
 )
 
 var RootCmd = &cobra.Command{
-	Use:   "ver",
-	Short: "ver - simple git tag version incrementer",
-	RunE:  rootCmdFn,
+	Use:     "ver",
+	Short:   "ver - a simple git tag semver version incrementer",
+	Long:    "ver increments semver style git tags",
+	Example: "$ ver -m -p\n Tag `v0.2.1` created successfully\n 27c1f1234188aa11585334726f8721d9a35038eb",
+	RunE:    rootCmdFn,
 }
 
 func rootCmdFn(cmd *cobra.Command, args []string) error {
@@ -63,7 +65,7 @@ func rootCmdFn(cmd *cobra.Command, args []string) error {
 	}
 
 	if latestVer == newVer {
-		return errors.New("Version already exists.")
+		return errors.New("No flags provided but at least (1) flag has to be set!")
 	}
 
 	user, err := model.GetGitUser()
