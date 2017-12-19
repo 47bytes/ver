@@ -6,17 +6,26 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
-	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing"
+	git "gopkg.in/libgit2/git2go.v25"
 )
+
+var PREFIX string
 
 type Version struct {
 	Major int
 	Minor int
 	Patch int
-	Build string
+	build string
+}
+
+func (v Version) String() string {
+	if v.build != "" {
+		return fmt.Sprintf("%s%d.%d.%d-%s", PREFIX, v.Major, v.Minor, v.Patch, v.build)
+	}
+	return fmt.Sprintf("%s%d.%d.%d", PREFIX, v.Major, v.Minor, v.Patch)
 }
 
 type Versions []Version
@@ -67,7 +76,7 @@ func toVersion(s string) Version {
 		Major: major,
 		Minor: minor,
 		Patch: patch,
-		Build: build,
+		build: build,
 	}
 
 	return v
@@ -95,30 +104,28 @@ var RootCmd = &cobra.Command{
 func rootCmdFn(cmd *cobra.Command, args []string) error {
 
 	prefix, _ := cmd.Flags().GetString("prefix")
+	PREFIX = prefix
 
 	pwd, err := os.Getwd()
 	if err != nil {
 		return errors.New("Unable to get working directory. " + err.Error())
 	}
 
-	rep, err := git.PlainOpen(pwd)
+	repo, err := git.OpenRepository(pwd)
 	if err != nil {
 		return errors.New("Directory doesn't appear to be a git repository. " + err.Error())
 	}
 
-	tagRefs, err := rep.Tags()
+	tags, err := repo.Tags.List()
 	if err != nil {
-		return err
+		return errors.New("Tags could not be loaded. " + err.Error())
 	}
 
 	versions := Versions{}
-	err = tagRefs.ForEach(func(t *plumbing.Reference) error {
-		x := t.Strings()
-		v := getVersionFromTag(x[0], prefix)
+	for _, tag := range tags {
+		v := getVersionFromTag(tag, prefix)
 		versions = append(versions, v)
-		return nil
-	})
-	CheckError(err)
+	}
 
 	latestVer := versions.latest()
 	newVer := latestVer
@@ -139,6 +146,98 @@ func rootCmdFn(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("old %#v\n", latestVer)
 	fmt.Printf("new %#v\n", newVer)
+	fmt.Println(newVer)
+
+	confPath, _ := git.ConfigFindGlobal()
+	if err != nil {
+		return errors.New("Couldn't locate git config. " + err.Error())
+	}
+
+	simpleConf, err := git.NewConfig()
+	if err != nil {
+		return err
+	}
+
+	conf, err := git.OpenOndisk(simpleConf, confPath)
+	if err != nil {
+		return err
+	}
+
+	name, err := conf.LookupString("user.name")
+	if err != nil {
+		return errors.New("Couldn't find user.name git config key. " + err.Error())
+	}
+	email, err := conf.LookupString("user.email")
+	if err != nil {
+		return errors.New("Couldn't find user.email git config key. " + err.Error())
+	}
+
+	user := &git.Signature{
+		Name:  name,
+		Email: email,
+		When:  time.Now(),
+	}
+
+	head, err := repo.Head()
+	if err != nil {
+		return err
+	}
+
+	oid := head.Target()
+
+	commit, err := repo.LookupCommit(oid)
+	if err != nil {
+		return err
+	}
+
+	blubb, _ := repo.Tags.Create(newVer.String(), commit, user, newVer.String())
+
+	fmt.Printf("%#v", blubb)
+
+	// rep.Tags.Create(newVer.String()	, commit *git.Commit, tagger *git.Signature, message string)
+
+	// rep, err := git.PlainOpen(pwd)
+	// if err != nil {
+	// 	return errors.New("Directory doesn't appear to be a git repository. " + err.Error())
+	// }
+
+	// tagRefs, err := rep.Tags()
+	// if err != nil {
+	// 	return err
+	// }
+
+	// versions := Versions{}
+	// err = tagRefs.ForEach(func(t *plumbing.Reference) error {
+	// 	x := t.Strings()
+	// 	v := getVersionFromTag(x[0], prefix)
+	// 	v.tag = t
+	// 	versions = append(versions, v)
+	// 	return nil
+	// })
+	// CheckError(err)
+
+	// latestVer := versions.latest()
+	// newVer := latestVer
+
+	// major, _ := cmd.Flags().GetBool("major")
+	// minor, _ := cmd.Flags().GetBool("minor")
+	// patch, _ := cmd.Flags().GetBool("patch")
+
+	// if major {
+	// 	newVer.Major += 1
+	// }
+	// if minor {
+	// 	newVer.Minor += 1
+	// }
+	// if patch {
+	// 	newVer.Patch += 1
+	// }
+
+	// fmt.Printf("old %#v\n", latestVer)
+	// fmt.Printf("new %#v\n", newVer)
+
+	// tag, err := rep.TagObject(newVer.tag.Hash())
+	// rep.Worktree().Commit(msg string, opts *git.CommitOptions)
 
 	// tags, err := rep.TagObjects()
 	// err = tags.ForEach(func(t *object.Tag) error {
