@@ -33,6 +33,16 @@ func (versions Versions) Latest() Version {
 			latest = v
 		}
 
+		if v.Major > latest.Major {
+			latest = v
+		}
+		if (v.Major == latest.Major) && (v.Minor > latest.Minor) {
+			latest = v
+		}
+		if (v.Major == latest.Major) && (v.Minor == latest.Minor) && (v.Patch > latest.Patch) {
+			latest = v
+		}
+
 		if (v.Major >= latest.Major) && (v.Minor >= latest.Minor) && (v.Patch >= latest.Patch) {
 			latest = v
 		}

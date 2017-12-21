@@ -50,18 +50,37 @@ func rootCmdFn(cmd *cobra.Command, args []string) error {
 	latestVer := versions.Latest()
 	newVer := latestVer
 
+	printLatest, _ := cmd.Flags().GetBool("latest")
+	if printLatest {
+		fmt.Printf("%s\n", latestVer)
+		return nil
+	}
+
 	major, _ := cmd.Flags().GetBool("major")
 	minor, _ := cmd.Flags().GetBool("minor")
 	patch, _ := cmd.Flags().GetBool("patch")
 
 	if major {
 		newVer.Major += 1
+		newVer.Minor = 0
+		newVer.Patch = 0
 	}
 	if minor {
 		newVer.Minor += 1
+		newVer.Patch = 0
 	}
 	if patch {
 		newVer.Patch += 1
+	}
+
+	setToVersion, _ := cmd.Flags().GetString("set")
+	if setToVersion != "" {
+		v, err := model.GetVersionFromTag(setToVersion)
+		if err != nil {
+			return errors.New("Couldn't get version from tag. " + err.Error())
+		}
+
+		newVer = *v
 	}
 
 	if latestVer == newVer {
@@ -94,4 +113,6 @@ func init() {
 	RootCmd.Flags().BoolP("major", "M", false, "Increase major version number")
 	RootCmd.Flags().BoolP("minor", "m", false, "Increase minor version number")
 	RootCmd.Flags().BoolP("patch", "p", false, "Increase patch version number")
+	RootCmd.Flags().StringP("set", "s", "", "Set version to this. e.g. ver -s \"v15.8.14\"")
+	RootCmd.Flags().BoolP("latest", "l", false, "Print latest version")
 }
