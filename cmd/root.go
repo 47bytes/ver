@@ -51,7 +51,7 @@ func rootCmdFn(cmd *cobra.Command, args []string) error {
 	newVer := latestVer
 
 	printLatest, _ := cmd.Flags().GetBool("latest")
-	if printLatest {
+	if printLatest || (latestVer == newVer) {
 		fmt.Printf("%s\n", latestVer)
 		return nil
 	}
@@ -83,9 +83,9 @@ func rootCmdFn(cmd *cobra.Command, args []string) error {
 		newVer = *v
 	}
 
-	if latestVer == newVer {
-		return errors.New("No flags provided but at least (1) flag has to be set!")
-	}
+	// if latestVer == newVer {
+	// 	return errors.New("No flags provided but at least (1) flag has to be set!")
+	// }
 
 	user, err := model.GetGitUser()
 	if err != nil {
