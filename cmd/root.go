@@ -50,12 +50,6 @@ func rootCmdFn(cmd *cobra.Command, args []string) error {
 	latestVer := versions.Latest()
 	newVer := latestVer
 
-	printLatest, _ := cmd.Flags().GetBool("latest")
-	if printLatest || (latestVer == newVer) {
-		fmt.Printf("%s\n", latestVer)
-		return nil
-	}
-
 	major, _ := cmd.Flags().GetBool("major")
 	minor, _ := cmd.Flags().GetBool("minor")
 	patch, _ := cmd.Flags().GetBool("patch")
@@ -83,6 +77,11 @@ func rootCmdFn(cmd *cobra.Command, args []string) error {
 		newVer = *v
 	}
 
+	printLatest, _ := cmd.Flags().GetBool("latest")
+	if printLatest || (latestVer == newVer) {
+		fmt.Printf("%s\n", latestVer)
+		return nil
+	}
 	// if latestVer == newVer {
 	// 	return errors.New("No flags provided but at least (1) flag has to be set!")
 	// }
